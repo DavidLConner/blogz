@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block body %}
+        <div>
+                
+        <form method='POST'>
+            <label>User Name:</label>
+            <input type='text' name='username' required>
+            <span class='error'>{{username_error}}</span>
+            
+            <label for='password'>Password:</label>
+                <input type='password' name='password' value='{{password}}' required/>
+                    <span class='error'>{{password_error}}</span>  
+                    
+                    <br>  
+                    <p></p>
+        
+            <input type="submit" name='submit' value="Sign up" />
+            <p></p>
+            <p></p>
+            <p>Don't have an account? <a href="/register">Register</a> for one!</p>
+
+        </form>
+        </div>
+{% endblock %}
