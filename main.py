@@ -10,19 +10,19 @@ db = SQLAlchemy(app)
 app.secret_key = "ads;lkfja"
 
 class Blogpost(db.Model):
-
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120))
     body = db.Column(db.Text)
     owner = db.Column(db. Integer, db.ForeignKey('user.id'))
 
-    def __init__(self, title, body):
+    def __init__(self, title, body, owner):
         self.title = title
         self.body = body
+        self.owner = owner
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(120))
+    username = db.Column(db.String(120), unique=True)
     password = db.Column(db.String(120))
     owner = db.relationship('Blogpost', backref='user')
 
@@ -49,18 +49,29 @@ def newpost():
     if request.method == 'POST':   
         title = request.form['title']
         body = request.form['body']
-        user = User.query.filter_by(username=session['user']).all()
+        user = User.query.filter_by(username=session['user']).first()
+        # if not user:
+        #     flash('Addblog - User not found.')
+        #     return redirect('/')
 
         new_blog = Blogpost(title, body, user)
+        
+    #     if (title) or (body) == "":
+    #         return render_template('blogs.html')
+    #     else:
+    #         flash('Fields cannot be left empty.')
+    # else:
+    #     return render_template('newpost.html')  
+
+        
         db.session.add(new_blog)
         db.session.commit()
+        flash('You have successully posted a blog entry')
+        return redirect('/')
 
-        if (title) or (body) == "":
-            return redirect('/blogs')
-        else:
-            flash('Fields cannot be left empty.')
-    else:
-        return render_template('newpost.html')    
+    return render_template('newpost.html')
+
+         
  
 @app.route('/signup', methods=['POST', 'GET']) 
 def signup():
@@ -78,32 +89,32 @@ def signup():
         email = request.form['email']
     
     
-        if (len(username) < 3 or len(username) > 20) or (" " in username):
+        # if (len(username) < 3 or len(username) > 20) or (" " in username):
             
-            username_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
-            username = ''
+        #     username_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
+        #     username = ''
 
-        if (len(password) < 3 or len(password) > 20) or (" " in password):
-            password_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
-            password = ''
+        # if (len(password) < 3 or len(password) > 20) or (" " in password):
+        #     password_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
+        #     password = ''
 
-        if verify_password != password:
-            verify_password_error = 'Your passwords do not match.'
-            verify_password = ''
+        # if verify_password != password:
+        #     verify_password_error = 'Your passwords do not match.'
+        #     verify_password = ''
 
-        if not email_regex.match(email): 
-            email_error = 'Invalid E-mail.'
-        if email != '' and (len(email) < 3 or len(email) > 20):
-            email_error = 'Your email is outside the limits of 3 - 20 characters.'
+        # if not email_regex.match(email): 
+        #     email_error = 'Invalid E-mail.'
+        # if email != '' and (len(email) < 3 or len(email) > 20):
+        #     email_error = 'Your email is outside the limits of 3 - 20 characters.'
     
     
-        if not username_error and not password_error and not verify_password_error and not email_error:
-            #user = username
-            new_user=User(username, password)
-            db.session.add(new_user)
-            db.session.commit()
-            flash('new user added')
-            return redirect('/')   
+        # if not username_error and not password_error and not verify_password_error and not email_error:
+        #     #user = username
+        new_user=User(username, password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('New user added')
+        return redirect('/login')   
 
 #        return render_template('user-signup.html', username_error=username_error,
 #            password_error=password_error, verify_password_error=verify_password_error,
@@ -125,20 +136,22 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
 
-        if not user:
-            flash ('user not found')
+        if user:
+            if user.password == password:
+                session['user'] = user.username
+                flash('You have sucessfully logged In')
+                return redirect('/')
+            else:
+                flash('Bad Password')
+        else:
+            flash('user not found')
 
-            return redirect('/login')
-            
-        if user and user.password == password:
-            session['user']=username
-            return redirect('/')
-    
     return render_template('login.html')
 
 @app.route('/Sign_Out')
-def Sign_Out():
-    del session['user']
+def logout():
+    session.clear()
+    flash('You have successfully logged out')
     return redirect('/')    
 
 if __name__ == '__main__':

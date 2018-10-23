@@ -5,15 +5,22 @@
         <title>{{title}}</title>
     </head>
 <body>
-
+    <!username: {{user}}>
+    {% with messages = get_flashed_messages() %}
+        <ul>
+            {% for message in messages %}
+            <li>{{message}}</li>
+            {% endfor %}
+        </ul>
+    {% endwith %}
     <div>
-        <a href='/blogs'>Main Blog Page</a>
+        <a href='/'>Main Blog Page</a>
         <p></p>
         <a href='/newpost'>Add a Blog Entry</a>
         <p></p>
         <a href='login'>Sign In</a> 
         <p></p>
-        <a href='logout'>Sign Out</a>
+        <a href='Sign_Out'>Sign Out</a>
 
         <p></p>
 
