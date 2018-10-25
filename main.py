@@ -13,7 +13,7 @@ class Blogpost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120))
     body = db.Column(db.Text)
-    owner = db.Column(db. Integer, db.ForeignKey('user.id'))
+    owner_id = db.Column(db. Integer, db.ForeignKey('user.id'))
 
     def __init__(self, title, body, owner):
         self.title = title
@@ -24,7 +24,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(120), unique=True)
     password = db.Column(db.String(120))
-    owner = db.relationship('Blogpost', backref='user')
+    user = db.relationship('Blogpost', backref='user')
 
     def __init__(self, username, password):
         self.username = username
@@ -33,6 +33,19 @@ class User(db.Model):
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
+    user = User.query.all()
+    user_id = request.args.get('id')
+    # db.session.add(user)
+    # db.session.commit()
+
+    if user_id:
+        writer = User.query.get('user_id')
+        return render_template('user-ID.html', title="Blogger", writer=writer)
+    else:
+        return render_template('Users.html',user=user)
+
+@app.route('/blogs', methods = ['POST', 'GET'])
+def blogs():
     blogs=Blogpost.query.all()
     blog_id = request.args.get('id')
     
@@ -42,7 +55,8 @@ def index():
         return render_template('blog-ID.html', title="Blog Post", post=post)    
     else:
  
-        return render_template('blogs.html', blogs=blogs)
+        return render_template('Users.html', blogs=blogs)
+
 
 @app.route('/newpost', methods=['POST', 'GET'])
 def newpost(): 
@@ -54,22 +68,19 @@ def newpost():
         #     flash('Addblog - User not found.')
         #     return redirect('/')
 
-        new_blog = Blogpost(title, body, user)
-        
-    #     if (title) or (body) == "":
-    #         return render_template('blogs.html')
-    #     else:
-    #         flash('Fields cannot be left empty.')
-    # else:
-    #     return render_template('newpost.html')  
-
-        
+        new_blog = Blogpost(title, body, user.id)
         db.session.add(new_blog)
-        db.session.commit()
-        flash('You have successully posted a blog entry')
-        return redirect('/')
-
-    return render_template('newpost.html')
+        db.session.commit() 
+        
+        
+        if (title) or (body) == "":
+            flash('You have successully posted a blog entry')
+            return redirect('/')
+        else:
+            flash('Fields cannot be left empty.')
+    else:
+        
+        return render_template('newpost.html') 
 
          
  
