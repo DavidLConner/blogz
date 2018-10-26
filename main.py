@@ -24,38 +24,43 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(120), unique=True)
     password = db.Column(db.String(120))
-    user = db.relationship('Blogpost', backref='user')
+    blogs = db.relationship('Blogpost', backref='owner')
 
     def __init__(self, username, password):
         self.username = username
         self.password = password
 
+@app.before_request
+def require_signin():
+    allowed = ['signup', 'login', 'blogs', 'index']
+
+    if request.endpoint not in allowed and 'user' not in session:
+        return redirect('/login')
+
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
-    user = User.query.all()
     user_id = request.args.get('id')
-    # db.session.add(user)
-    # db.session.commit()
-
     if user_id:
-        writer = User.query.get('user_id')
-        return render_template('user-ID.html', title="Blogger", writer=writer)
-    else:
-        return render_template('Users.html',user=user)
+        writer = User.query.filter_by(id=user_id).first()
+        posts = Blogpost.query.filter_by(owner=writer).all()
+        return render_template('singleUser.html', posts = posts)
+
+    users = User.query.all()
+    
+    return render_template('Users.html',users=users)
 
 @app.route('/blogs', methods = ['POST', 'GET'])
 def blogs():
-    blogs=Blogpost.query.all()
     blog_id = request.args.get('id')
-    
-
     if blog_id:
-        post = Blogpost.query.get(blog_id)
-        return render_template('blog-ID.html', title="Blog Post", post=post)    
-    else:
- 
-        return render_template('Users.html', blogs=blogs)
+        blog_id_int = int(blog_id)
+        posts = Blogpost.query.filter_by(id=blog_id_int).first()
+        
+        return render_template('blog-ID.html', title="Blog Post", posts=posts)
+
+    blogs=Blogpost.query.all()
+    return render_template('blogs.html', blogs=blogs)
 
 
 @app.route('/newpost', methods=['POST', 'GET'])
@@ -68,16 +73,19 @@ def newpost():
         #     flash('Addblog - User not found.')
         #     return redirect('/')
 
-        new_blog = Blogpost(title, body, user.id)
+        new_blog = Blogpost(title, body, user)
         db.session.add(new_blog)
         db.session.commit() 
         
         
         if (title) or (body) == "":
             flash('You have successully posted a blog entry')
-            return redirect('/')
+            url= "/blogs?id=" + str(new_blog.id)
+            return redirect(url)
         else:
             flash('Fields cannot be left empty.')
+
+
     else:
         
         return render_template('newpost.html') 
@@ -90,42 +98,38 @@ def signup():
     username_error = ''
     password_error = ''
     verify_password_error = ''
-    email_error = ''
-    email_regex = re.compile(r"[^@\s]+@[^@\s]+\.[a-zA-Z0-9]+$")
+    
+   
 
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         verify_password = request.form['verify_password']
-        email = request.form['email']
+        
     
     
-        # if (len(username) < 3 or len(username) > 20) or (" " in username):
+        if (len(username) < 3 or len(username) > 20) or (" " in username):
             
-        #     username_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
-        #     username = ''
+            username_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
+            username = ''
 
-        # if (len(password) < 3 or len(password) > 20) or (" " in password):
-        #     password_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
-        #     password = ''
+        if (len(password) < 3 or len(password) > 20) or (" " in password):
+            password_error = 'Invalid entry.  This field must contain between 3-20 alpha-numeric characters with no spaces.'
+            password = ''
 
-        # if verify_password != password:
-        #     verify_password_error = 'Your passwords do not match.'
-        #     verify_password = ''
-
-        # if not email_regex.match(email): 
-        #     email_error = 'Invalid E-mail.'
-        # if email != '' and (len(email) < 3 or len(email) > 20):
-        #     email_error = 'Your email is outside the limits of 3 - 20 characters.'
+        if verify_password != password:
+            verify_password_error = 'Your passwords do not match.'
+            verify_password = ''
     
     
-        # if not username_error and not password_error and not verify_password_error and not email_error:
-        #     #user = username
-        new_user=User(username, password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('New user added')
-        return redirect('/login')   
+        if not username_error and not password_error and not verify_password_error:
+            #user = username
+
+            new_user=User(username, password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('New user added')
+            return redirect('/login')   
 
 #        return render_template('user-signup.html', username_error=username_error,
 #            password_error=password_error, verify_password_error=verify_password_error,
@@ -133,11 +137,8 @@ def signup():
             
 
 
-        return redirect('/login')
-
     return render_template('user-signup.html', username_error=username_error,
-        password_error=password_error, verify_password_error=verify_password_error,
-        email_error=email_error, username='', password='', verify_password='', email='' )        
+        password_error=password_error, verify_password_error=verify_password_error, username='', password='', verify_password='')        
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -151,7 +152,7 @@ def login():
             if user.password == password:
                 session['user'] = user.username
                 flash('You have sucessfully logged In')
-                return redirect('/')
+                return redirect('/newpost')
             else:
                 flash('Bad Password')
         else:
